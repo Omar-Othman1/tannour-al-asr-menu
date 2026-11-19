@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tannour Al Asr | Menu</title>
+<meta name="description" content="Tannour Al Asr menu">
+<style>
+  html, body { margin: 0; background: #1b1b1b; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #eee; }
+  #pages { max-width: 1000px; margin: 0 auto; }
+  .page { position: relative; width: 100%; background: #2a2a2a; margin-bottom: 4px; }
+  .page canvas { display: block; width: 100%; height: 100%; }
+  #status { text-align: center; padding: 40px 16px; }
+  #status a, #download { color: #f0c36d; }
+  #download {
+    position: fixed; right: 12px; bottom: 12px; padding: 10px 14px;
+    background: rgba(0, 0, 0, .75); border-radius: 24px;
+    font-size: 14px; text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div id="status">Loading menu…</div>
+<div id="pages"></div>
+<a id="download" href="Menu%20Tannour%20Al%20Asr.pdf" target="_blank" rel="noopener">Open PDF</a>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function () {
+  var PDF_URL = 'Menu%20Tannour%20Al%20Asr.pdf';
+  var status = document.getElementById('status');
+  var container = document.getElementById('pages');
+
+  function fail() {
+    status.innerHTML = 'Could not display the menu here. <a href="' + PDF_URL + '">Open the PDF</a>';
+    status.style.display = '';
+  }
+
+  if (!window.pdfjsLib) { fail(); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  pdfjsLib.getDocument(PDF_URL).promise.then(function (pdf) {
+    return pdf.getPage(1).then(function (first) {
+      var v = first.getViewport({ scale: 1 });
+      var defaultRatio = v.height / v.width;
+      status.style.display = 'none';
+
+      // Render each page only when it scrolls near the screen.
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          renderPage(pdf, entry.target);
+        });
+      }, { rootMargin: '800px 0px' });
+
+      for (var n = 1; n <= pdf.numPages; n++) {
+        var holder = document.createElement('div');
+        holder.className = 'page';
+        holder.dataset.page = n;
+        holder.style.aspectRatio = '1 / ' + defaultRatio;
+        container.appendChild(holder);
+        observer.observe(holder);
+      }
+    });
+  }).catch(fail);
+
+  function renderPage(pdf, holder) {
+    pdf.getPage(Number(holder.dataset.page)).then(function (page) {
+      var base = page.getViewport({ scale: 1 });
+      holder.style.aspectRatio = base.width + ' / ' + base.height;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var scale = (holder.clientWidth * dpr) / base.width;
+      var viewport = page.getViewport({ scale: scale });
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      holder.appendChild(canvas);
+      return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+    }).catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
